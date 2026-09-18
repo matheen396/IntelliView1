@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String                @id @default(uuid())
+  email       String                @unique
+  name        String?
+  isValidated Boolean               @default(false)
+  picture     String?
+  googleId    String?               @unique
+  role        UserRole              @default(STUDENT)
+  profileData Json?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  lastLoginAt DateTime?
+  interviews  Interview[]
+  experiences InterviewExperience[]
+  submissions PastQuestion[]
+  resumes     Resume[]
+}
+
+model Resume {
+  id              String      @id @default(uuid())
+  userId          String
+  fileName        String
+  fileUrl         String
+  fileSize        Int
+  mimeType        String
+  parsedData      Json?
+  skillsExtracted String[]
+  createdAt       DateTime    @default(now())
+  rawText         String?
+  vectorId        String?     @unique
+  isIndexed       Boolean     @default(false)
+  interviews      Interview[]
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Company {
+  id            String                @id @default(uuid())
+  name          String                @unique
+  logoUrl       String?
+  description   String?
+  website       String?
+  createdAt     DateTime              @default(now())
+  interviews    Interview[]
+  experiences   InterviewExperience[]
+  pastQuestions PastQuestion[]
+}
+
+model Interview {
+  id             String             @id @default(uuid())
+  userId         String
+  resumeId       String?
+  companyId      String?
+  type           InterviewType
+  role           String?
+  status         InterviewStatus    @default(PENDING)
+  score          Float?
+  duration       Int?
+  scheduledAt    DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime           @default(now())
+  company        Company?           @relation(fields: [companyId], references: [id])
+  resume         Resume?            @relation(fields: [resumeId], references: [id])
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions       InterviewSession[]
+  proctoringLogs ProctoringLog[]
+
+  @@index([userId])
+  @@index([companyId])
+}
+
+model InterviewSession {
+  id                 String    @id @default(uuid())
+  interviewId        String
+  questionId         String
+  aiGeneratedText    String?
+  answerText         String?
+  answerAudioUrl     String?
+  answerVideoUrl     String?
+  transcript         String?
+  score              Float?
+  feedback           String?
+  duration           Int?
+  createdAt          DateTime  @default(now())
+  technicalScore     Float?
+  communicationScore Float?
+  relevanceScore     Float?
+  interview          Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  question           Question  @relation(fields: [questionId], references: [id])
+
+  @@index([interviewId])
+}
+
+model Question {
+  id               String             @id @default(uuid())
+  role             String?
+  difficulty       Difficulty
+  techStack        String[]
+  questionText     String
+  category         QuestionCategory
+  expectedKeywords String[]
+  createdAt        DateTime           @default(now())
+  sessions         InterviewSession[]
+}
+
+model ProctoringLog {
+  id             String        @id @default(uuid())
+  interviewId    String
+  timestamp      DateTime      @default(now())
+  violationType  ViolationType
+  severity       Severity
+  screenshotUrl  String?
+  metadata       Json?
+  videoTimestamp Int?
+  interview      Interview     @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@index([interviewId])
+}
+
+model InterviewExperience {
+  id              String     @id @default(uuid())
+  userId          String
+  companyId       String
+  role            String
+  interviewDate   DateTime?
+  rounds          Int?
+  difficulty      Difficulty
+  preparationTips String?
+  questionsAsked  String[]
+  offerStatus     String?
+  verified        Boolean    @default(false)
+  upvotes         Int        @default(0)
+  createdAt       DateTime   @default(now())
+  company         Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([companyId])
+}
+
+model PastQuestion {
+  id            String     @id @default(uuid())
+  companyId     String
+  submittedBy   String
+  role          String
+  question      String
+  difficulty    Difficulty
+  interviewType String
+  verified      Boolean    @default(false)
+  upvotes       Int        @default(0)
+  createdAt     DateTime   @default(now())
+  company       Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  submitter     User       @relation(fields: [submittedBy], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+}
+
+enum UserRole {
+  STUDENT
+  ADMIN
+  PLACEMENT_COORDINATOR
+}
+
+enum InterviewType {
+  MOCK_TECHNICAL
+  MOCK_BEHAVIORAL
+  MOCK_CODING
+  CUSTOM_JD
+  COMPANY_SPECIFIC
+}
+
+enum InterviewStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  TERMINATED
+  CANCELLED
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuestionCategory {
+  TECHNICAL
+  BEHAVIORAL
+  CODING
+  SYSTEM_DESIGN
+  HR
+}
+
+enum ViolationType {
+  TAB_SWITCH
+  NO_FACE_DETECTED
+  MULTIPLE_FACES
+  PHONE_DETECTED
+  SUSPICIOUS_GAZE
+  MULTIPLE_VOICES
+  HIGH_BACKGROUND_NOISE
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
