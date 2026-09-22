@@ -2,7 +2,49 @@
 
 IntelliView is a full-stack, AI-powered platform designed to help users prepare for technical and behavioral interviews. It provides a realistic, high-pressure interview environment, complete with personalized questions, company-specific practice, and detailed performance analysis.
 
-**Project Status:** In Development
+**Project Status:** Ready for deployment configuration
+## Hosting readiness
+
+This project is structured for a split deployment:
+
+- Frontend: Vercel or any static host using `npm run build` from `frontend` and a `dist` output directory.
+- Backend: Render/Railway/VM hosting using `server` and `npm run build`, then `npm start`.
+- Database: PostgreSQL 16; the server expects `DATABASE_URL` and a running Docker/Postgres instance during local development.
+- Authentication: the frontend keeps a dev-only demo mode in `frontend/.env` (`VITE_ENABLE_REAL_AUTH=false`) so it remains safe for local development, but production must set `VITE_ENABLE_REAL_AUTH=true` and the server must receive valid Google OAuth values.
+
+Local host setup:
+
+```powershell
+cd server
+# start PostgreSQL using Docker Desktop
+# docker compose up -d
+npx prisma migrate deploy
+npm run dev
+
+cd ../frontend
+npm run dev
+```
+
+Production deployment requires the real service credentials in `server/.env` and a valid `FRONTEND_URL`/`GOOGLE_CALLBACK_URL` before enabling real auth.
+
+### Render deployment
+
+The repository includes [`render.yaml`](./render.yaml). Create a Render Blueprint from the repository, then provide every `sync: false` value in the Render dashboard. Use the generated Render service URL as the backend domain.
+
+### Vercel deployment
+
+Set the Vercel project root directory to `frontend`. The included [`frontend/vercel.json`](./frontend/vercel.json) keeps React Router routes working after refresh. Set `VITE_API_URL` to the deployed backend URL ending in `/api` and set `VITE_ENABLE_REAL_AUTH=true`.
+
+### Production verification
+
+After both services are deployed:
+
+```text
+GET https://YOUR_BACKEND_DOMAIN/health
+GET https://YOUR_BACKEND_DOMAIN/api
+```
+
+Then test Google login, logout, resume upload, and question generation from the deployed frontend. Do not enable production auth until the Google callback URL exactly matches the URL configured in Google Cloud.
 
 ---
 
@@ -30,17 +72,15 @@ IntelliView is a full-stack, AI-powered platform designed to help users prepare 
 
 ## 🛠️ Tech Stack
 
-- **Backend:** **Python (FastAPI)**
+- **Backend:** Node.js, Express 5, TypeScript, Prisma 7, PostgreSQL
 
-  - Handles all API logic, user authentication, and file storage.
-  - Manages WebSocket connections for real-time proctoring.
-  - Runs background tasks for heavy AI analysis.
+  - Handles API logic, Google OAuth/JWT authentication, resume processing, and AI question generation.
+  - Uses PostgreSQL through Prisma and Cloudinary for resume storage.
 
-- **Frontend:** **React.js**
+- **Frontend:** React 19, Vite 7, TypeScript, Tailwind CSS 4
 
   - Manages all UI, state, and user interaction.
-  - Captures video/audio using the `MediaRecorder` API.
-  - Streams video frames over WebSockets for proctoring.
+  - Captures the interview workflow and communicates with the backend through Axios.
 
 - **Generative AI & ML:**
   - **GenAI (e.g., OpenAI/Gemini):** For question generation and answer evaluation.

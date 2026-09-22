@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 
 export interface TokenPayload {
   userId: string;
@@ -10,7 +10,9 @@ export const generateAccessToken = (payload: TokenPayload) => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET is not defined");
   }
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "15m"});
+  return jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: (process.env.JWT_ACCESS_EXPIRY || "15m") as SignOptions["expiresIn"],
+  });
 };
 
 //generate refresh token (7 days)
@@ -18,8 +20,10 @@ export const generateRefreshToken = (payload: TokenPayload) => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET is not defined");
   }
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "30d" });
-}
+  return jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: (process.env.JWT_REFRESH_EXPIRY || "7d") as SignOptions["expiresIn"],
+  });
+};
 
 //verify access token
 export const verifyAccessToken = (token: string): TokenPayload => {

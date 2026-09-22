@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import axios from "axios";
+import api from "../services/api";
 
 interface TestResult {
   endpoint: string;
@@ -19,7 +19,7 @@ const Dashboard: React.FC = () => {
     roleName: string
   ): Promise<TestResult> => {
     try {
-      const response = await axios.get(endpoint);
+      const response = await api.get(endpoint);
       return {
         endpoint,
         roleName,
@@ -41,10 +41,10 @@ const Dashboard: React.FC = () => {
     setTestResults([]);
 
     const tests = [
-      { endpoint: "/api/protected/student", name: "Student Route" },
-      { endpoint: "/api/protected/admin", name: "Admin Route" },
-      { endpoint: "/api/protected/coordinator", name: "Coordinator Route" },
-      { endpoint: "/api/protected/profile", name: "Profile Route" },
+      { endpoint: "/protected/student", name: "Student Route" },
+      { endpoint: "/protected/admin", name: "Admin Route" },
+      { endpoint: "/protected/coordinator", name: "Coordinator Route" },
+      { endpoint: "/protected/profile", name: "Profile Route" },
     ];
 
     const results: TestResult[] = [];

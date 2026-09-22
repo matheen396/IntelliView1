@@ -5,9 +5,8 @@ import React, {
   useEffect,
   type ReactNode,
 } from "react";
-import axios from "axios";
+import api from "../services/api";
 
-// User interface matching backend response
 interface User {
   id: string;
   email: string;
@@ -16,7 +15,6 @@ interface User {
   role: string;
 }
 
-// Auth context type
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -27,55 +25,99 @@ interface AuthContextType {
   clearError: () => void;
 }
 
-// Create the context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// API URL from environment
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const ENABLE_REAL_AUTH =
+  import.meta.env.PROD || import.meta.env.VITE_ENABLE_REAL_AUTH === "true";
+const isLocalDemoMode =
+  import.meta.env.DEV && import.meta.env.VITE_ENABLE_REAL_AUTH !== "true";
 
-// Configure axios defaults
-axios.defaults.baseURL = API_URL;
-axios.defaults.withCredentials = true; // Important for cookies!
+const normalizeApiBaseUrl = (baseUrl: string) => {
+  if (baseUrl.endsWith("/api")) return baseUrl;
+  return `${baseUrl.replace(/\/$/, "")}/api`;
+};
 
-// Auth Provider Component
+const mockUser: User = {
+  id: "mock-user-123",
+  email: "demo@intelliview.com",
+  name: "Demo User",
+  picture: null,
+  role: "STUDENT",
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  // 🔓 BYPASS MODE: Mock user for development
-  const [user] = useState<User | null>({
-    id: "mock-user-123",
-    email: "demo@intelliview.com",
-    name: "Demo User",
-    picture: null,
-    role: "STUDENT",
-  });
-  const [loading] = useState(false); // Set to false to skip loading
+  const [user, setUser] = useState<User | null>(
+    isLocalDemoMode ? mockUser : null
+  );
+  const [loading, setLoading] = useState(isLocalDemoMode ? false : true);
   const [error, setError] = useState<string | null>(null);
 
-  // Redirect to Google OAuth (DISABLED in bypass mode)
   const login = () => {
-    console.log("� Auth bypassed - login disabled");
-    alert("Authentication is bypassed. You're already logged in as Demo User!");
+    if (ENABLE_REAL_AUTH) {
+      window.location.href = `${normalizeApiBaseUrl(API_URL)}/auth/google`;
+      return;
+    }
+
+    setUser(mockUser);
+    setError(null);
   };
 
-  // Logout user (DISABLED in bypass mode)
   const logout = async () => {
-    console.log("🔓 Auth bypassed - logout disabled");
-    alert("Logout disabled in bypass mode. Refresh the page to continue.");
+    if (ENABLE_REAL_AUTH) {
+      try {
+        await api.post("/auth/logout");
+      } catch (logoutError) {
+        console.warn("Logout request failed, continuing with local cleanup", logoutError);
+      }
+    }
+
+    setUser(null);
+    setError(null);
+    localStorage.removeItem("accessToken");
   };
 
-  // Refresh authentication tokens (DISABLED in bypass mode)
   const refreshAuth = async () => {
-    console.log("🔓 Auth bypassed - refresh disabled");
+    if (!ENABLE_REAL_AUTH) {
+      setUser(mockUser);
+      return;
+    }
+
+    try {
+      const response = await api.get("/auth/me");
+      setUser(response.data?.user ?? response.data ?? null);
+      setError(null);
+    } catch (refreshError) {
+      console.warn("Auth refresh failed", refreshError);
+      setUser(null);
+    }
   };
 
-  // Clear error
   const clearError = () => setError(null);
 
-  // Initial auth check on mount (DISABLED in bypass mode)
   useEffect(() => {
-    console.log("🔓 Auth bypass mode active - skipping authentication");
-    // Skip all auth checks
+    if (!ENABLE_REAL_AUTH) {
+      setUser(isLocalDemoMode ? mockUser : null);
+      setLoading(false);
+      return;
+    }
+
+    const hydrateUser = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/auth/me");
+        setUser(response.data?.user ?? response.data ?? null);
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    hydrateUser();
   }, []);
 
   return (
@@ -95,7 +137,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   );
 };
 
-// Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

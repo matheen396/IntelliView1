@@ -4,6 +4,14 @@ import { generateTokens, verifyRefreshToken } from "../utils/jwt";
 import { prisma } from "../config/database";
 import { TokenPayload } from "../utils/jwt";
 
+const isProduction = process.env.NODE_ENV === "production";
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+  path: "/",
+};
+
 /**
  * Handle Google OAuth callback
  */
@@ -26,17 +34,13 @@ export const handleGoogleCallback = (req: AuthRequest, res: Response): void => {
 
     // Set HTTP-only cookies for security
     res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      ...cookieOptions,
+      maxAge: 15 * 60 * 1000,
     });
 
     res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      ...cookieOptions,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     console.log(
@@ -104,16 +108,12 @@ export const refreshAccessToken = (
 
     // Set new cookies
     res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      ...cookieOptions,
       maxAge: 15 * 60 * 1000,
     });
 
     res.cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -138,8 +138,8 @@ export const refreshAccessToken = (
 export const logout = (req: AuthRequest, res: Response): void => {
   const userEmail = req.user?.email;
 
-  res.clearCookie("accessToken");
-  res.clearCookie("refreshToken");
+  res.clearCookie("accessToken", cookieOptions);
+  res.clearCookie("refreshToken", cookieOptions);
 
   console.log(`✅ User logged out: ${userEmail}`);
 

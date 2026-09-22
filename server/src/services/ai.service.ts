@@ -79,7 +79,8 @@ DIFFICULTY LEVELS:
  * Generate interview questions based on resume and job role
  */
 export const generateInterviewQuestions = async (
-  request: QuestionGenerationRequest
+  request: QuestionGenerationRequest,
+  userId?: string
 ): Promise<QuestionGenerationResponse> => {
   const { resumeId, jobRole, company, numberOfQuestions = 10 } = request;
   const difficultyMix = request.difficultyMix || {
@@ -88,9 +89,12 @@ export const generateInterviewQuestions = async (
     hard: 3,
   };
 
-  // 1. Fetch resume data from database
-  const resume = await prisma.resume.findUnique({
-    where: { id: resumeId },
+  // 1. Fetch resume data from database with the authenticated user's ownership check
+  const resume = await prisma.resume.findFirst({
+    where: {
+      id: resumeId,
+      ...(userId ? { userId } : {}),
+    },
     select: {
       rawText: true,
       skillsExtracted: true,
@@ -105,7 +109,7 @@ export const generateInterviewQuestions = async (
   });
 
   if (!resume) {
-    throw new Error("Resume not found");
+    throw new Error(userId ? "Resume not found or access denied" : "Resume not found");
   }
 
   // 2. Search for similar questions from the vector database

@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { type InternalAxiosRequestConfig } from "axios";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -11,6 +11,10 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+type RetriableRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+};
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -29,12 +33,25 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem("accessToken");
-      // Optionally redirect to login
+  async (error) => {
+    const originalRequest = error.config as RetriableRequestConfig | undefined;
+
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest.url?.endsWith("/auth/refresh")
+    ) {
+      originalRequest._retry = true;
+
+      try {
+        await api.post("/auth/refresh");
+        return api(originalRequest);
+      } catch {
+        localStorage.removeItem("accessToken");
+      }
     }
+
     return Promise.reject(error);
   }
 );

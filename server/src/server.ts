@@ -8,6 +8,33 @@ import { prisma } from "./config/database";
 
 const PORT = process.env.PORT || 8000;
 
+function validateProductionConfiguration() {
+  if (process.env.NODE_ENV !== "production") {
+    return;
+  }
+
+  const required = [
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "GOOGLE_CALLBACK_URL",
+    "FRONTEND_URL",
+    "CLOUDINARY_CLOUD_NAME",
+    "CLOUDINARY_API_KEY",
+    "CLOUDINARY_API_SECRET",
+    "OPENAI_API_KEY",
+    "PINECONE_API_KEY",
+  ];
+  const missing = required.filter((key) => !process.env[key]);
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required production environment variables: ${missing.join(", ")}`
+    );
+  }
+}
+
 // Test database connection
 async function connectDatabase() {
   try {
@@ -32,6 +59,7 @@ async function connectDatabase() {
 // Start server
 async function startServer() {
   try {
+    validateProductionConfiguration();
     // Connect to database first
     await connectDatabase();
 

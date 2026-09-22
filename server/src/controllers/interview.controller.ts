@@ -49,7 +49,7 @@ export const generateQuestions = async (
       difficultyMix: difficultyMix || { easy: 2, medium: 5, hard: 3 },
     };
 
-    const result = await generateInterviewQuestions(request);
+    const result = await generateInterviewQuestions(request, userId);
 
     res.json({
       success: true,
@@ -60,8 +60,18 @@ export const generateQuestions = async (
     console.error("Question generation error:", error);
 
     // Handle specific errors
-    if (error.message === "Resume not found") {
-      res.status(404).json({ success: false, message: "Resume not found" });
+    if (
+      error.message === "Resume not found" ||
+      error.message === "Resume not found or access denied"
+    ) {
+      const status = error.message === "Resume not found or access denied" ? 403 : 404;
+      res.status(status).json({
+        success: false,
+        message:
+          error.message === "Resume not found or access denied"
+            ? "Resume not found or access denied"
+            : "Resume not found",
+      });
       return;
     }
 
