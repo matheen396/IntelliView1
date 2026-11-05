@@ -534,3 +534,5 @@ npx prisma migrate reset
 - [React Documentation](https://react.dev/)
 - [TailwindCSS Documentation](https://tailwindcss.com/)
 - [Vite Documentation](https://vitejs.dev/)
+#   I n t e l l i V i e w 1  
+ 
