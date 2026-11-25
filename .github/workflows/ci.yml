@@ -1,3 +1,4 @@
+
 name: CI
 
 on:
@@ -34,5 +35,8 @@ jobs:
           cache: npm
           cache-dependency-path: server/package-lock.json
       - run: npm ci --legacy-peer-deps
-      - run: npx prisma generate
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/intelliview?schema=public"
       - run: npm run build
